@@ -27,23 +27,53 @@ app.post("/webhook", bodyParser.raw({ type: "application/json" }), (req, res) =>
     console.log("✅ Webhook received:", event.type, event.id);
 
     switch (event.type) {
-      case "checkout.session.completed":
-        // handle successful checkout
-        break;
-      case "invoice.paid":
-        // handle successful invoice payment
-        break;
-      case "invoice.payment_failed":
-        // handle failed payment
-        break;
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted":
-        // handle subscription changes
-        break;
-      default:
-        console.log("ℹ️ Unhandled event:", event.type);
-    }
+  case "checkout.session.completed": {
+    const session = event.data.object;
+    console.log("✅ Checkout complete for:", session.customer_email || session.customer);
+    // 1) Identify user via session.client_reference_id or session.metadata.userId
+    // 2) Save session.customer and session.subscription in your DB
+    // 3) Grant access or mark subscription as active
+    break;
+  }
 
+  case "invoice.paid": {
+    const invoice = event.data.object;
+    console.log("💰 Invoice paid:", invoice.id, "Customer:", invoice.customer);
+    // Extend access / record payment
+    break;
+  }
+
+  case "invoice.payment_failed": {
+    const invoice = event.data.object;
+    console.warn("⚠️ Invoice payment failed for customer:", invoice.customer);
+    // Flag account, restrict features, or email the user
+    break;
+  }
+
+  case "customer.subscription.updated": {
+    const sub = event.data.object;
+    console.log("🔄 Subscription updated:", sub.id, "status:", sub.status);
+    // Update plan or expiry date in DB
+    break;
+  }
+
+  case "customer.subscription.deleted": {
+    const sub = event.data.object;
+    console.log("❌ Subscription cancelled:", sub.id);
+    // Revoke access immediately or at period end
+    break;
+  }
+
+  case "customer.subscription.trial_will_end": {
+    const sub = event.data.object;
+    console.log("⏳ Trial ending soon for:", sub.id);
+    // Optional: send reminder email
+    break;
+  }
+
+  default:
+    console.log("ℹ️ Unhandled event:", event.type);
+}
     return res.sendStatus(200);
   } catch (err) {
     console.error("❌ Webhook verification failed:", err.message);
